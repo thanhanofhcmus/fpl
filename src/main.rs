@@ -9,15 +9,40 @@ mod parser;
 mod token;
 
 fn main() {
-    let s = r#" "a" == "a" 1 == 1 if true and false then 1 else 2 end true or false 12 + 2 / 3"#;
+    // let s = r#" "a" == "a" 1 == 1 if true and false then 1 else 2 end true or false 12 + 2 / 3"#;
 
-    let mut lexer = crate::lexer::PeekableLexer::new(s);
+    repl();
+}
 
-    let ast = parse(&mut lexer).unwrap();
+fn repl() {
+    loop {
+        let mut line = String::new();
+        std::io::stdin().read_line(&mut line).unwrap();
 
-    println!("{:?}", &ast);
+        if line == "quit" {
+            return;
+        }
 
-    let v = interpret(ast).unwrap();
+        let mut lexer = crate::lexer::PeekableLexer::new(line.as_str());
 
-    println!("{:?}", v);
+        let ast = match parse(&mut lexer) {
+            Err(err) => {
+                eprintln!("parse failed: {}", err);
+                continue;
+            }
+            Ok(a) => a,
+        };
+
+        println!("{:?}", &ast);
+
+        let v = match interpret(ast) {
+            Err(err) => {
+                eprintln!("intepret failed: {}", err);
+                continue;
+            }
+            Ok(a) => a,
+        };
+
+        println!("{:?}", v);
+    }
 }

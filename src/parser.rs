@@ -23,6 +23,7 @@ fn binary(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
     let l = primary(lexer)?;
     let op = peek_token(lexer)?;
     match op {
+        // TODO: precedence
         Plus | Minus | Star | Slash | And | Or | EqualEqual | BangEqual => {
             consume_token(lexer, &[])?;
             let r = primary(lexer)?;
