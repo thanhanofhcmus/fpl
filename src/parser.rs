@@ -23,8 +23,8 @@ fn binary(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
     let l = primary(lexer)?;
     let op = peek_token(lexer)?;
     match op {
-        Plus | Minus | Star | Slash | And | Or => {
-            consume_token(lexer, &[Plus, Minus, Star, Slash, And, Or])?;
+        Plus | Minus | Star | Slash | And | Or | EqualEqual | BangEqual => {
+            consume_token(lexer, &[])?;
             let r = primary(lexer)?;
             Ok(AstNode::Binary {
                 l: Box::new(l),
@@ -70,14 +70,14 @@ fn extract_token(lexer: &mut PeekableLexer) -> Result<Token, String> {
 
 fn peek_token(lexer: &mut PeekableLexer) -> Result<Token, String> {
     match lexer.peek() {
-        Some(token_result) => token_result.map_err(|e| format!("got lex peek error {}", e)),
+        Some(token_result) => token_result.map_err(|e| format!("got lex peek error {:?}", e)),
         None => eof_error(),
     }
 }
 
 fn consume_token(lexer: &mut PeekableLexer, expects: &'static [Token]) -> Result<Token, String> {
     let token = extract_token(lexer)?;
-    if expects.contains(&token) {
+    if expects.is_empty() || expects.contains(&token) {
         Ok(token)
     } else {
         Err(format!(

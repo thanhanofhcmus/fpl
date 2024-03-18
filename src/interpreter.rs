@@ -22,30 +22,44 @@ pub fn interpret(ast: AstNode) -> Result<Value, String> {
 }
 
 fn binary(l: AstNode, op: Token, r: AstNode) -> Result<Value, String> {
+    use Token::*;
     let le = interpret(l)?;
     let re = interpret(r)?;
     match op {
-        Token::Plus | Token::Minus | Token::Star | Token::Slash => {
+        EqualEqual | BangEqual => {
+            let mut is_equal = false;
+            if let (Value::Bool(a), Value::Bool(b)) = (&le, &re) {
+                is_equal = a == b;
+            }
+            if let (Value::Number(a), Value::Number(b)) = (&le, &re) {
+                is_equal = a == b;
+            }
+            if let (Value::Str(a), Value::Str(b)) = (&le, &re) {
+                is_equal = a == b;
+            }
+            Ok(Value::Bool((op == BangEqual) ^ is_equal))
+        }
+        Plus | Minus | Star | Slash => {
             let (Value::Number(a), Value::Number(b)) = (&le, &re) else {
-                return Err(format!("expect number, have {:?}, {:?}", le, re));
+                return Err(format!("expect two number, have {:?}, {:?}", le, re));
             };
             let v = match op {
-                Token::Plus => a + b,
-                Token::Minus => a - b,
-                Token::Star => a * b,
-                Token::Slash => a / b,
+                Plus => a + b,
+                Minus => a - b,
+                Star => a * b,
+                Slash => a / b,
                 _ => panic!(),
             };
             Ok(Value::Number(v))
         }
-        Token::And | Token::Or => {
+        And | Or => {
             let (Value::Bool(a), Value::Bool(b)) = (&le, &re) else {
-                return Err(format!("expect boolean, have {:?}, {:?}", le, re));
+                return Err(format!("expect two booleans, have {:?}, {:?}", le, re));
             };
             let (a, b) = (*a, *b);
             let v = match op {
-                Token::And => a && b,
-                Token::Or => a || b,
+                And => a && b,
+                Or => a || b,
                 _ => panic!(),
             };
             Ok(Value::Bool(v))

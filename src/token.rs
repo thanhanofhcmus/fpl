@@ -14,7 +14,7 @@ pub enum Token {
     #[token("false", |_| false)]
     Bool(bool),
 
-    #[regex("[a-zA-Z]+", |l| l.slice().to_owned() )]
+    #[regex(r#""[a-zA-Z]+""#, |l| l.slice().to_owned() )]
     Str(String),
 
     #[regex(r"\d+", |l| l.slice().parse::<f64>().unwrap())]
@@ -37,6 +37,10 @@ pub enum Token {
     Star,
     #[token("/")]
     Slash,
+    #[token("==")]
+    EqualEqual,
+    #[token("!=")]
+    BangEqual,
 
     #[token("\n", priority = 3)]
     NewLine,
