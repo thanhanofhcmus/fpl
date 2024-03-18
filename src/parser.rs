@@ -1,35 +1,43 @@
 use crate::ast::{AstNode, Value};
-use crate::lexer::Token;
-use logos::Lexer;
+use crate::lexer::PeekableLexer;
+use crate::token::Token;
 
 fn eof_error<T>() -> Result<T, String> {
     Err("no next token".to_string())
 }
 
-pub fn parse(lexer: &mut Lexer<'_, Token>) -> Result<AstNode, String> {
-    binary(lexer)
+pub fn parse(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
+    expr(lexer)
 }
 
-fn binary(lexer: &mut Lexer<'_, Token>) -> Result<AstNode, String> {
+pub fn expr(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
+    let token = peek_token(lexer)?;
+    match token {
+        Token::If => if_(lexer),
+        _ => binary(lexer),
+    }
+}
+
+fn binary(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
     use Token::*;
     let l = primary(lexer)?;
-    let op = extract_token(lexer)?;
+    let op = peek_token(lexer)?;
     match op {
-        Plus | Minus | Star | Slash | And | Or => {}
-        _ => return Err(format!("invalid binary op {:?}", op)),
+        Plus | Minus | Star | Slash | And | Or => {
+            consume_token(lexer, &[Plus, Minus, Star, Slash, And, Or])?;
+            let r = primary(lexer)?;
+            Ok(AstNode::Binary {
+                l: Box::new(l),
+                op,
+                r: Box::new(r),
+            })
+        }
+        _ => Ok(l),
     }
-    let r = primary(lexer)?;
-
-    Ok(AstNode::Binary {
-        l: Box::new(l),
-        op,
-        r: Box::new(r),
-    })
 }
 
-fn primary(lexer: &mut Lexer<'_, Token>) -> Result<AstNode, String> {
+fn primary(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
     let token = extract_token(lexer)?;
-
     match token {
         Token::Bool(b) => Ok(AstNode::Primary(Value::Bool(b))),
         Token::Number(n) => Ok(AstNode::Primary(Value::Number(n))),
@@ -38,9 +46,43 @@ fn primary(lexer: &mut Lexer<'_, Token>) -> Result<AstNode, String> {
     }
 }
 
-fn extract_token(lexer: &mut Lexer<'_, Token>) -> Result<Token, String> {
+fn if_(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
+    consume_token(lexer, &[Token::If])?;
+    let cond = expr(lexer)?;
+    consume_token(lexer, &[Token::Then])?;
+    let true_ = expr(lexer)?;
+    consume_token(lexer, &[Token::Else])?;
+    let false_ = expr(lexer)?;
+    consume_token(lexer, &[Token::End])?;
+    Ok(AstNode::If {
+        cond: Box::new(cond),
+        true_: Box::new(true_),
+        false_: Box::new(false_),
+    })
+}
+
+fn extract_token(lexer: &mut PeekableLexer) -> Result<Token, String> {
     match lexer.next() {
-        Some(token_result) => token_result.map_err(|e| format!("got lexr error {}", e)),
+        Some(token_result) => token_result.map_err(|e| format!("got lex extract error {}", e)),
         None => eof_error(),
+    }
+}
+
+fn peek_token(lexer: &mut PeekableLexer) -> Result<Token, String> {
+    match lexer.peek() {
+        Some(token_result) => token_result.map_err(|e| format!("got lex peek error {}", e)),
+        None => eof_error(),
+    }
+}
+
+fn consume_token(lexer: &mut PeekableLexer, expects: &'static [Token]) -> Result<Token, String> {
+    let token = extract_token(lexer)?;
+    if expects.contains(&token) {
+        Ok(token)
+    } else {
+        Err(format!(
+            "unexpected token, expect {:?}, got {:?}",
+            expects, token
+        ))
     }
 }

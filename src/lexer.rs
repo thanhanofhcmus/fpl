@@ -1,32 +1,35 @@
-use logos::Logos;
+use crate::token::{Token, TokenResult};
+use logos::{Lexer, Logos};
 
-#[derive(Debug, PartialEq, Logos)]
-#[logos(skip r"\s", error = String)]
-pub enum Token {
-    #[token("and")]
-    And,
-    #[token("or")]
-    Or,
+pub struct PeekableLexer<'source> {
+    lexer: Lexer<'source, Token>,
+    peeked: Option<Option<TokenResult>>,
+}
 
-    #[token("true", |_| true)]
-    #[token("false", |_| false)]
-    Bool(bool),
+impl<'source> PeekableLexer<'source> {
+    pub fn new(source: &'source str) -> Self {
+        Self {
+            lexer: Token::lexer(source),
+            peeked: None,
+        }
+    }
 
-    #[regex("[a-zA-Z]+", |l| l.slice().to_owned() )]
-    Str(String),
+    pub fn peek(&mut self) -> Option<TokenResult> {
+        if self.peeked.is_none() {
+            self.peeked = Some(self.lexer.next());
+        }
+        self.peeked.clone().unwrap()
+    }
+}
 
-    #[regex(r"\d+", |l| l.slice().parse::<f64>().unwrap())]
-    Number(f64),
+impl<'source> Iterator for PeekableLexer<'source> {
+    type Item = TokenResult;
 
-    #[token("+")]
-    Plus,
-    #[token("-")]
-    Minus,
-    #[token("*")]
-    Star,
-    #[token("/")]
-    Slash,
-
-    #[token("\n", priority = 3)]
-    NewLine,
+    fn next(&mut self) -> Option<TokenResult> {
+        if let Some(peeked) = self.peeked.take() {
+            peeked
+        } else {
+            self.lexer.next()
+        }
+    }
 }

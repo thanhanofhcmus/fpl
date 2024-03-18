@@ -1,5 +1,5 @@
 use crate::ast::{AstNode, Value};
-use crate::lexer::Token;
+use crate::token::Token;
 
 pub fn interpret(ast: AstNode) -> Result<Value, String> {
     match ast {
@@ -32,8 +32,21 @@ pub fn interpret(ast: AstNode) -> Result<Value, String> {
                     };
                     Ok(Value::Bool(v))
                 }
-                _ => return Err("invalid op".to_owned()),
+                _ => Err("invalid op".to_owned()),
             }
+        }
+        AstNode::If {
+            cond,
+            true_,
+            false_,
+        } => {
+            let cond = interpret(*cond)?;
+            let Value::Bool(c) = &cond else {
+                return Err(format!("invalid if condition {:?}", cond));
+            };
+            let c = *c;
+            let v = interpret(if c { *true_ } else { *false_ })?;
+            Ok(v)
         }
         AstNode::Primary(v) => Ok(v),
     }

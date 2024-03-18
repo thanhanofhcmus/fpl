@@ -1,5 +1,3 @@
-use lexer::Token;
-use logos::Logos;
 use parser::parse;
 
 use crate::interpreter::interpret;
@@ -8,11 +6,12 @@ mod ast;
 mod interpreter;
 mod lexer;
 mod parser;
+mod token;
 
 fn main() {
-    let s = "true or false 12 + 2 / 3";
+    let s = "if true and false then 1 else 2 end true or false 12 + 2 / 3";
 
-    let mut lexer = Token::lexer(s);
+    let mut lexer = crate::lexer::PeekableLexer::new(s);
 
     let ast = parse(&mut lexer).unwrap();
 

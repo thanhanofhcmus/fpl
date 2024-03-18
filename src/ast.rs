@@ -1,4 +1,4 @@
-use crate::lexer::Token;
+use crate::token::Token;
 
 #[derive(Debug)]
 pub enum Value {
@@ -15,4 +15,9 @@ pub enum AstNode {
         r: Box<AstNode>,
     },
     Primary(Value),
+    If {
+        cond: Box<AstNode>,
+        true_: Box<AstNode>,
+        false_: Box<AstNode>,
+    },
 }
