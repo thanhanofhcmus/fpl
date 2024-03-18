@@ -1,16 +1,16 @@
 use crate::ast::{AstNode, Value};
-use crate::lexer::PeekableLexer;
+use crate::lexer::Lexer;
 use crate::token::Token;
 
 fn eof_error<T>() -> Result<T, String> {
     Err("no next token".to_string())
 }
 
-pub fn parse(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
+pub fn parse(lexer: &mut Lexer) -> Result<AstNode, String> {
     expr(lexer)
 }
 
-pub fn expr(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
+pub fn expr(lexer: &mut Lexer) -> Result<AstNode, String> {
     let token = peek_token(lexer)?;
     match token {
         Token::If => if_(lexer),
@@ -18,7 +18,7 @@ pub fn expr(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
     }
 }
 
-fn binary(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
+fn binary(lexer: &mut Lexer) -> Result<AstNode, String> {
     use Token::*;
     let l = primary(lexer)?;
     let op = peek_token(lexer)?;
@@ -37,7 +37,7 @@ fn binary(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
     }
 }
 
-fn primary(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
+fn primary(lexer: &mut Lexer) -> Result<AstNode, String> {
     let token = extract_token(lexer)?;
     match token {
         Token::Bool(b) => Ok(AstNode::Primary(Value::Bool(b))),
@@ -47,7 +47,7 @@ fn primary(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
     }
 }
 
-fn if_(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
+fn if_(lexer: &mut Lexer) -> Result<AstNode, String> {
     consume_token(lexer, &[Token::If])?;
     let cond = expr(lexer)?;
     consume_token(lexer, &[Token::Then])?;
@@ -62,21 +62,21 @@ fn if_(lexer: &mut PeekableLexer) -> Result<AstNode, String> {
     })
 }
 
-fn extract_token(lexer: &mut PeekableLexer) -> Result<Token, String> {
+fn extract_token(lexer: &mut Lexer) -> Result<Token, String> {
     match lexer.next() {
         Some(token_result) => token_result.map_err(|e| format!("got lex extract error {}", e)),
         None => eof_error(),
     }
 }
 
-fn peek_token(lexer: &mut PeekableLexer) -> Result<Token, String> {
+fn peek_token(lexer: &mut Lexer) -> Result<Token, String> {
     match lexer.peek() {
         Some(token_result) => token_result.map_err(|e| format!("got lex peek error {:?}", e)),
         None => eof_error(),
     }
 }
 
-fn consume_token(lexer: &mut PeekableLexer, expects: &'static [Token]) -> Result<Token, String> {
+fn consume_token(lexer: &mut Lexer, expects: &'static [Token]) -> Result<Token, String> {
     let token = extract_token(lexer)?;
     if expects.is_empty() || expects.contains(&token) {
         Ok(token)

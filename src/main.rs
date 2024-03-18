@@ -23,7 +23,7 @@ fn repl() {
             return;
         }
 
-        let mut lexer = crate::lexer::PeekableLexer::new(line.as_str());
+        let mut lexer = crate::lexer::Lexer::new(line.as_str());
 
         let ast = match parse(&mut lexer) {
             Err(err) => {

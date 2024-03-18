@@ -1,12 +1,12 @@
 use crate::token::{Token, TokenResult};
-use logos::{Lexer, Logos};
+use logos::{Lexer as LogosLExer, Logos};
 
-pub struct PeekableLexer<'source> {
-    lexer: Lexer<'source, Token>,
+pub struct Lexer<'source> {
+    lexer: LogosLExer<'source, Token>,
     peeked: Option<Option<TokenResult>>,
 }
 
-impl<'source> PeekableLexer<'source> {
+impl<'source> Lexer<'source> {
     pub fn new(source: &'source str) -> Self {
         Self {
             lexer: Token::lexer(source),
@@ -22,7 +22,7 @@ impl<'source> PeekableLexer<'source> {
     }
 }
 
-impl<'source> Iterator for PeekableLexer<'source> {
+impl<'source> Iterator for Lexer<'source> {
     type Item = TokenResult;
 
     fn next(&mut self) -> Option<TokenResult> {
