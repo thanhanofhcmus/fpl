@@ -13,7 +13,7 @@ pub enum Token {
     Bool(bool),
 
     #[regex("[a-zA-Z]+", |l| l.slice().to_owned() )]
-    Text(String),
+    Str(String),
 
     #[regex(r"\d+", |l| l.slice().parse::<f64>().unwrap())]
     Number(f64),

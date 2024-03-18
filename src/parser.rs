@@ -11,10 +11,11 @@ pub fn parse(lexer: &mut Lexer<'_, Token>) -> Result<AstNode, String> {
 }
 
 fn binary(lexer: &mut Lexer<'_, Token>) -> Result<AstNode, String> {
+    use Token::*;
     let l = primary(lexer)?;
     let op = extract_token(lexer)?;
     match op {
-        Token::Plus | Token::Minus | Token::Star | Token::Slash => {}
+        Plus | Minus | Star | Slash | And | Or => {}
         _ => return Err(format!("invalid binary op {:?}", op)),
     }
     let r = primary(lexer)?;
@@ -32,6 +33,7 @@ fn primary(lexer: &mut Lexer<'_, Token>) -> Result<AstNode, String> {
     match token {
         Token::Bool(b) => Ok(AstNode::Primary(Value::Bool(b))),
         Token::Number(n) => Ok(AstNode::Primary(Value::Number(n))),
+        Token::Str(s) => Ok(AstNode::Primary(Value::Str(s))),
         t => Err(format!("invlalid token {:?}", t)),
     }
 }

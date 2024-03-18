@@ -6,17 +6,34 @@ pub fn interpret(ast: AstNode) -> Result<Value, String> {
         AstNode::Binary { l, op, r } => {
             let le = interpret(*l)?;
             let re = interpret(*r)?;
-            let (Value::Number(a), Value::Number(b)) = (le, re) else {
-                return Err("invalid type".to_string());
-            };
-            let v = match op {
-                Token::Plus => a + b,
-                Token::Minus => a - b,
-                Token::Star => a * b,
-                Token::Slash => a / b,
+            match op {
+                Token::Plus | Token::Minus | Token::Star | Token::Slash => {
+                    let (Value::Number(a), Value::Number(b)) = (&le, &re) else {
+                        return Err(format!("expect number, have {:?}, {:?}", le, re));
+                    };
+                    let v = match op {
+                        Token::Plus => a + b,
+                        Token::Minus => a - b,
+                        Token::Star => a * b,
+                        Token::Slash => a / b,
+                        _ => panic!(),
+                    };
+                    Ok(Value::Number(v))
+                }
+                Token::And | Token::Or => {
+                    let (Value::Bool(a), Value::Bool(b)) = (&le, &re) else {
+                        return Err(format!("expect boolean, have {:?}, {:?}", le, re));
+                    };
+                    let (a, b) = (*a, *b);
+                    let v = match op {
+                        Token::And => a && b,
+                        Token::Or => a || b,
+                        _ => panic!(),
+                    };
+                    Ok(Value::Bool(v))
+                }
                 _ => return Err("invalid op".to_owned()),
-            };
-            Ok(Value::Number(v))
+            }
         }
         AstNode::Primary(v) => Ok(v),
     }

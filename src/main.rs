@@ -10,7 +10,7 @@ mod lexer;
 mod parser;
 
 fn main() {
-    let s = "12 + 2 / 3";
+    let s = "true or false 12 + 2 / 3";
 
     let mut lexer = Token::lexer(s);
 
