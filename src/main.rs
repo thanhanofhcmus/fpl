@@ -9,8 +9,7 @@ mod parser;
 mod token;
 
 fn main() {
-    // let s = r#" "a" == "a" 1 == 1 if true and false then 1 else 2 end true or false 12 + 2 / 3"#;
-
+    // let s = r#"'abc' "a" == "a" 1 == 1 if true and false then 1 else 2 end "#;
     repl();
 }
 
