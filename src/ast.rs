@@ -6,7 +6,7 @@ pub enum Value {
     Number(f64),
     Str(String),
     Fn {
-        args: Vec<String>,
+        params: Vec<String>,
         body: Box<AstNode>,
     },
     Nil,

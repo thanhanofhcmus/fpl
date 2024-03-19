@@ -87,12 +87,9 @@ fn call(lexer: &mut Lexer) -> ParseResult {
         return Err(format!("need ident token, got {:?}", ident_token));
     };
     consume_token(lexer, &[Token::LRoundParen])?;
-    // TODO: args
+    let args = comma_list(lexer, clause)?;
     consume_token(lexer, &[Token::RRountParen])?;
-    Ok(AstNode::Call {
-        ident,
-        args: vec![],
-    })
+    Ok(AstNode::Call { ident, args })
 }
 
 fn binary(lexer: &mut Lexer) -> ParseResult {
@@ -100,16 +97,13 @@ fn binary(lexer: &mut Lexer) -> ParseResult {
 }
 
 fn binary_pratt(lexer: &mut Lexer, min_bp: u8) -> ParseResult {
+    // TODO: unary not, -
     let mut l = primary(lexer)?;
     loop {
         let op = peek_token(lexer)?;
         // TODO: if op is Eof|NewLine return
-        let (l_bp, r_bp) = match infix_binding_power(&op) {
-            Ok(v) => v,
-            Err(e) => {
-                dbg!(e);
-                break;
-            }
+        let Some((l_bp, r_bp)) = infix_binding_power(&op) else {
+            break;
         };
         // old left > new left
         if min_bp > l_bp {
@@ -127,7 +121,7 @@ fn binary_pratt(lexer: &mut Lexer, min_bp: u8) -> ParseResult {
     Ok(l)
 }
 
-fn infix_binding_power(op: &Token) -> Result<(u8, u8), String> {
+fn infix_binding_power(op: &Token) -> Option<(u8, u8)> {
     use Token::*;
     let bps = match op {
         Plus | Minus => (1, 2),
@@ -135,9 +129,10 @@ fn infix_binding_power(op: &Token) -> Result<(u8, u8), String> {
         And | Or => (5, 6),
         Less | LessEqual | Greater | GreaterEqual => (7, 8),
         EqualEqual | BangEqual => (9, 10),
-        _ => return Err(format!("invalid operator for infix binding power {:?}", op)),
+        // _ => return Err(format!("invalid operator for infix binding power {:?}", op)),
+        _ => return None,
     };
-    Ok(bps)
+    Some(bps)
 }
 
 fn primary(lexer: &mut Lexer) -> ParseResult {
@@ -156,20 +151,20 @@ fn primary(lexer: &mut Lexer) -> ParseResult {
 
 fn fn_decl(lexer: &mut Lexer) -> ParseResult {
     // consume_token(lexer, &[Token::Fn])?;
-    // TODO: args
+    let params = comma_list(lexer, extract_ident)?;
     consume_token(lexer, &[Token::Do])?;
     let body = multi(lexer)?;
     consume_token(lexer, &[Token::End])?;
     Ok(AstNode::Primary(Value::Fn {
-        args: vec![], // TODO:
+        params,
         body: Box::new(body),
     }))
 }
 
-fn comma_list(
+fn comma_list<T>(
     lexer: &mut Lexer,
-    lower_fn: fn(&mut Lexer) -> ParseResult,
-) -> Result<Vec<AstNode>, String> {
+    lower_fn: fn(&mut Lexer) -> Result<T, String>,
+) -> Result<Vec<T>, String> {
     let prim = lower_fn(lexer)?;
     let mut nodes = vec![prim];
     while let Ok(Token::Comma) = peek_token(lexer) {
@@ -178,6 +173,15 @@ fn comma_list(
         nodes.push(node);
     }
     Ok(nodes)
+}
+
+fn extract_ident(lexer: &mut Lexer) -> Result<String, String> {
+    let token = extract_token(lexer)?;
+    if let Token::Identifier(ident) = token {
+        Ok(ident)
+    } else {
+        Err(format!("expect identifier token, got {:?}", token))
+    }
 }
 
 fn extract_token(lexer: &mut Lexer) -> Result<Token, String> {

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::iter::zip;
 
 use crate::ast::{AstNode, Value};
 use crate::token::Token;
@@ -60,17 +61,22 @@ pub fn interpret(env: &mut Environment, ast: AstNode) -> Result<Value, String> {
             Ok(Value::Nil)
         }
         AstNode::Call { ident, args } => {
-            let Some(Value::Fn {
-                args: fn_args,
-                body,
-            }) = env.get_with_parent(&ident)
-            else {
+            let Some(Value::Fn { params, body }) = env.get_with_parent(&ident) else {
                 return Ok(Value::Nil);
             };
-            // TODO: new env
-            _ = fn_args;
-            _ = args;
+            if params.len() != args.len() {
+                return Err(format!(
+                    "invalid arity, want {} but got {}",
+                    params.len(),
+                    args.len(),
+                ));
+            }
             let mut child_env = Environment::with_parent(env);
+            for (p, a) in zip(params, args) {
+                // TODO: maybe interpret(env, a)
+                let v = interpret(&mut child_env, a)?;
+                child_env.variables.insert(p, v);
+            }
             interpret(&mut child_env, *body.to_owned())
         }
     }
