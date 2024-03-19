@@ -1,30 +1,48 @@
+use std::collections::HashMap;
+
 use crate::ast::{AstNode, Value};
 use crate::token::Token;
 
-pub fn interpret(ast: AstNode) -> Result<Value, String> {
+#[derive(Default)]
+pub struct Environment {
+    variables: HashMap<String, Value>,
+}
+
+pub fn interpret(env: &mut Environment, ast: AstNode) -> Result<Value, String> {
     match ast {
-        AstNode::Binary { l, op, r } => binary(*l, op, *r),
+        AstNode::Binary { left, op, right } => binary(env, *left, op, *right),
         AstNode::If {
             cond,
             true_,
             false_,
         } => {
-            let cond = interpret(*cond)?;
+            let cond = interpret(env, *cond)?;
             let Value::Bool(c) = &cond else {
                 return Err(format!("invalid if condition {:?}", cond));
             };
             let c = *c;
-            let v = interpret(if c { *true_ } else { *false_ })?;
+            let v = interpret(env, if c { *true_ } else { *false_ })?;
             Ok(v)
         }
         AstNode::Primary(v) => Ok(v),
+        AstNode::Variable(ident) => Ok(env
+            .variables
+            .get(&ident)
+            .map(|v| v.to_owned())
+            .unwrap_or(Value::Nil)),
+        AstNode::Assign { ident, body } => {
+            let expr = interpret(env, *body)?;
+            env.variables.insert(ident, expr);
+            // TODO
+            Ok(Value::Nil)
+        }
     }
 }
 
-fn binary(l: AstNode, op: Token, r: AstNode) -> Result<Value, String> {
+fn binary(env: &mut Environment, l: AstNode, op: Token, r: AstNode) -> Result<Value, String> {
     use Token::*;
-    let le = interpret(l)?;
-    let re = interpret(r)?;
+    let le = interpret(env, l)?;
+    let re = interpret(env, r)?;
     match op {
         EqualEqual | BangEqual => {
             let mut is_equal = false;

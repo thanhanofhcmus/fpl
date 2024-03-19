@@ -10,6 +10,9 @@ pub enum Token {
     #[token("or")]
     Or,
 
+    #[token("nil")]
+    Nil,
+
     #[token("true", |_| true)]
     #[token("false", |_| false)]
     Bool(bool),
@@ -32,6 +35,8 @@ pub enum Token {
     #[token("end")]
     End,
 
+    #[token("=")]
+    Equal,
     #[token("+")]
     Plus,
     #[token("-")]

@@ -6,19 +6,45 @@ fn eof_error<T>() -> Result<T, String> {
     Err("no next token".to_string())
 }
 
-pub fn parse(lexer: &mut Lexer) -> Result<AstNode, String> {
+pub type ParseResult = Result<AstNode, String>;
+
+pub fn parse(lexer: &mut Lexer) -> ParseResult {
     expr(lexer)
 }
 
-pub fn expr(lexer: &mut Lexer) -> Result<AstNode, String> {
+pub fn expr(lexer: &mut Lexer) -> ParseResult {
     let token = peek_token(lexer)?;
     match token {
         Token::If => if_(lexer),
+        Token::Identifier(_) => {
+            if let Some(Ok(Token::Equal)) = lexer.peek_two_token() {
+                assign(lexer)
+            } else {
+                binary(lexer)
+            }
+        }
         _ => binary(lexer),
     }
 }
 
-fn binary(lexer: &mut Lexer) -> Result<AstNode, String> {
+fn assign(lexer: &mut Lexer) -> ParseResult {
+    let ident_token = extract_token(lexer)?;
+    let Token::Identifier(ident) = ident_token else {
+        return Err(format!("need ident token, got {:?}", ident_token));
+    };
+    consume_token(lexer, &[Token::Equal])?;
+    let clause = clause(lexer)?;
+    Ok(AstNode::Assign {
+        ident,
+        body: Box::new(clause),
+    })
+}
+
+fn clause(lexer: &mut Lexer) -> ParseResult {
+    binary(lexer)
+}
+
+fn binary(lexer: &mut Lexer) -> ParseResult {
     use Token::*;
     let l = primary(lexer)?;
     let op = peek_token(lexer)?;
@@ -28,26 +54,27 @@ fn binary(lexer: &mut Lexer) -> Result<AstNode, String> {
             consume_token(lexer, &[])?;
             let r = primary(lexer)?;
             Ok(AstNode::Binary {
-                l: Box::new(l),
+                left: Box::new(l),
                 op,
-                r: Box::new(r),
+                right: Box::new(r),
             })
         }
         _ => Ok(l),
     }
 }
 
-fn primary(lexer: &mut Lexer) -> Result<AstNode, String> {
+fn primary(lexer: &mut Lexer) -> ParseResult {
     let token = extract_token(lexer)?;
     match token {
         Token::Bool(b) => Ok(AstNode::Primary(Value::Bool(b))),
         Token::Number(n) => Ok(AstNode::Primary(Value::Number(n))),
         Token::Str(s) => Ok(AstNode::Primary(Value::Str(s))),
+        Token::Identifier(ident) => Ok(AstNode::Variable(ident)),
         t => Err(format!("invlalid token {:?}", t)),
     }
 }
 
-fn if_(lexer: &mut Lexer) -> Result<AstNode, String> {
+fn if_(lexer: &mut Lexer) -> ParseResult {
     consume_token(lexer, &[Token::If])?;
     let cond = expr(lexer)?;
     consume_token(lexer, &[Token::Then])?;
@@ -70,7 +97,7 @@ fn extract_token(lexer: &mut Lexer) -> Result<Token, String> {
 }
 
 fn peek_token(lexer: &mut Lexer) -> Result<Token, String> {
-    match lexer.peek() {
+    match lexer.peek_token() {
         Some(token_result) => token_result.map_err(|e| format!("got lex peek error {:?}", e)),
         None => eof_error(),
     }

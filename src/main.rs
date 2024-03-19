@@ -14,6 +14,7 @@ fn main() {
 }
 
 fn repl() {
+    let mut env = interpreter::Environment::default();
     loop {
         let mut line = String::new();
         std::io::stdin().read_line(&mut line).unwrap();
@@ -34,7 +35,7 @@ fn repl() {
 
         println!("{:?}", &ast);
 
-        let v = match interpret(ast) {
+        let v = match interpret(&mut env, ast) {
             Err(err) => {
                 eprintln!("intepret failed: {}", err);
                 continue;
