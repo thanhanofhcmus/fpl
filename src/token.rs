@@ -30,6 +30,8 @@ pub enum Token {
     Fn,
     #[token("if")]
     If,
+    #[token("then")]
+    Then,
     #[token("else")]
     Else,
     #[token("do")]
@@ -65,7 +67,4 @@ pub enum Token {
     LessEqual,
     #[token(">=")]
     GreaterEqual,
-
-    #[token("\n", priority = 3)]
-    NewLine,
 }

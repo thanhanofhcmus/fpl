@@ -9,7 +9,12 @@ mod parser;
 mod token;
 
 fn main() {
-    // let s = r#"'abc' "a" == "a" 1 == 1 if true and false then 1 else 2 end "#;
+    // {
+    //     let line = "sum = fn n do if n == 0 then 0 else n + sum(n - 1) end end";
+    //     let mut lexer = crate::lexer::Lexer::new(line);
+
+    //     println!("{:?}", parse(&mut lexer))
+    // }
     repl();
 }
 
