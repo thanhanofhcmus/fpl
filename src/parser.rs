@@ -16,13 +16,11 @@ pub fn expr(lexer: &mut Lexer) -> ParseResult {
     let token = peek_token(lexer)?;
     match token {
         Token::If => if_(lexer),
-        Token::Identifier(_) => {
-            if let Some(Ok(Token::Equal)) = lexer.peek_two_token() {
-                assign(lexer)
-            } else {
-                binary(lexer)
-            }
-        }
+        Token::Identifier(_) => match lexer.peek_two_token() {
+            Some(Ok(Token::Equal)) => assign(lexer),
+            Some(Ok(Token::LRoundParen)) => call(lexer),
+            _ => binary(lexer),
+        },
         _ => binary(lexer),
     }
 }
@@ -37,6 +35,20 @@ fn assign(lexer: &mut Lexer) -> ParseResult {
     Ok(AstNode::Assign {
         ident,
         body: Box::new(clause),
+    })
+}
+
+fn call(lexer: &mut Lexer) -> ParseResult {
+    let ident_token = extract_token(lexer)?;
+    let Token::Identifier(ident) = ident_token else {
+        return Err(format!("need ident token, got {:?}", ident_token));
+    };
+    consume_token(lexer, &[Token::LRoundParen])?;
+    // TODO: args
+    consume_token(lexer, &[Token::RRountParen])?;
+    Ok(AstNode::Call {
+        ident,
+        args: vec![],
     })
 }
 

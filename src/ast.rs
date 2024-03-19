@@ -30,4 +30,8 @@ pub enum AstNode {
         ident: String,
         body: Box<AstNode>,
     },
+    Call {
+        ident: String,
+        args: Vec<AstNode>,
+    },
 }

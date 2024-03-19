@@ -36,6 +36,15 @@ pub fn interpret(env: &mut Environment, ast: AstNode) -> Result<Value, String> {
             // TODO
             Ok(Value::Nil)
         }
+        AstNode::Call { ident, args } => {
+            let Some(Value::Fn { args: f_args, body }) = env.variables.get(&ident) else {
+                return Ok(Value::Nil);
+            };
+            // TODO: new env
+            _ = f_args;
+            _ = args;
+            interpret(env, *body.to_owned())
+        }
     }
 }
 

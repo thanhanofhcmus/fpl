@@ -37,6 +37,10 @@ pub enum Token {
     #[token("end")]
     End,
 
+    #[token("(")]
+    LRoundParen,
+    #[token(")")]
+    RRountParen,
     #[token("=")]
     Equal,
     #[token("+")]
