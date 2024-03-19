@@ -26,12 +26,14 @@ pub enum Token {
     #[regex(r#""([^"\\]|\\.|"")*""#, |l| l.slice().to_owned(), priority=10)]
     Str(String),
 
+    #[token("fn")]
+    Fn,
     #[token("if")]
     If,
-    #[token("then")]
-    Then,
     #[token("else")]
     Else,
+    #[token("do")]
+    Do,
     #[token("end")]
     End,
 

@@ -70,14 +70,28 @@ fn primary(lexer: &mut Lexer) -> ParseResult {
         Token::Number(n) => Ok(AstNode::Primary(Value::Number(n))),
         Token::Str(s) => Ok(AstNode::Primary(Value::Str(s))),
         Token::Identifier(ident) => Ok(AstNode::Variable(ident)),
+        Token::Nil => Ok(AstNode::Primary(Value::Nil)),
+        Token::Fn => fn_decl(lexer),
         t => Err(format!("invlalid token {:?}", t)),
     }
+}
+
+fn fn_decl(lexer: &mut Lexer) -> ParseResult {
+    // consume_token(lexer, &[Token::Fn])?;
+    // TODO: args
+    consume_token(lexer, &[Token::Do])?;
+    let body = expr(lexer)?;
+    consume_token(lexer, &[Token::End])?;
+    Ok(AstNode::Primary(Value::Fn {
+        args: vec![], // TODO:
+        body: Box::new(body),
+    }))
 }
 
 fn if_(lexer: &mut Lexer) -> ParseResult {
     consume_token(lexer, &[Token::If])?;
     let cond = expr(lexer)?;
-    consume_token(lexer, &[Token::Then])?;
+    consume_token(lexer, &[Token::Do])?;
     let true_ = expr(lexer)?;
     consume_token(lexer, &[Token::Else])?;
     let false_ = expr(lexer)?;

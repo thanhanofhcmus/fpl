@@ -5,10 +5,14 @@ pub enum Value {
     Bool(bool),
     Number(f64),
     Str(String),
+    Fn {
+        args: Vec<String>,
+        body: Box<AstNode>,
+    },
     Nil,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AstNode {
     Primary(Value),
     Variable(String),
