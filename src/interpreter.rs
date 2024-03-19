@@ -4,8 +4,27 @@ use crate::ast::{AstNode, Value};
 use crate::token::Token;
 
 #[derive(Default)]
-pub struct Environment {
+pub struct Environment<'pa> {
     variables: HashMap<String, Value>,
+    parent: Option<&'pa Environment<'pa>>,
+}
+
+impl<'pa> Environment<'pa> {
+    fn with_parent(parent: &'pa Environment<'pa>) -> Self {
+        Self {
+            variables: HashMap::default(),
+            parent: Some(parent),
+        }
+    }
+
+    fn get_local(&self, ident: &'_ str) -> Option<Value> {
+        self.variables.get(ident).map(|t| t.to_owned())
+    }
+
+    fn get_with_parent(&self, ident: &'_ str) -> Option<Value> {
+        self.get_local(ident)
+            .or_else(|| self.parent.and_then(|pa| pa.get_with_parent(ident)))
+    }
 }
 
 pub fn interpret(env: &mut Environment, ast: AstNode) -> Result<Value, String> {
@@ -25,11 +44,7 @@ pub fn interpret(env: &mut Environment, ast: AstNode) -> Result<Value, String> {
             Ok(v)
         }
         AstNode::Primary(v) => Ok(v),
-        AstNode::Variable(ident) => Ok(env
-            .variables
-            .get(&ident)
-            .map(|v| v.to_owned())
-            .unwrap_or(Value::Nil)),
+        AstNode::Variable(ident) => Ok(env.get_with_parent(&ident).unwrap_or(Value::Nil)),
         AstNode::Assign { ident, body } => {
             let expr = interpret(env, *body)?;
             env.variables.insert(ident, expr);
@@ -37,13 +52,18 @@ pub fn interpret(env: &mut Environment, ast: AstNode) -> Result<Value, String> {
             Ok(Value::Nil)
         }
         AstNode::Call { ident, args } => {
-            let Some(Value::Fn { args: f_args, body }) = env.variables.get(&ident) else {
+            let Some(Value::Fn {
+                args: fn_args,
+                body,
+            }) = env.get_with_parent(&ident)
+            else {
                 return Ok(Value::Nil);
             };
             // TODO: new env
-            _ = f_args;
+            _ = fn_args;
             _ = args;
-            interpret(env, *body.to_owned())
+            let mut child_env = Environment::with_parent(env);
+            interpret(&mut child_env, *body.to_owned())
         }
     }
 }
