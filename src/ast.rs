@@ -21,6 +21,7 @@ pub enum AstNode {
         op: Token,
         right: Box<AstNode>,
     },
+    Multi(Vec<AstNode>),
     If {
         cond: Box<AstNode>,
         true_: Box<AstNode>,

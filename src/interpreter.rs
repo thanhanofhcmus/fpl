@@ -45,6 +45,14 @@ pub fn interpret(env: &mut Environment, ast: AstNode) -> Result<Value, String> {
         }
         AstNode::Primary(v) => Ok(v),
         AstNode::Variable(ident) => Ok(env.get_with_parent(&ident).unwrap_or(Value::Nil)),
+        AstNode::Multi(mut nodes) => {
+            // nodes is sure to have aleast one value in this state
+            let last_node = nodes.pop().unwrap();
+            for node in nodes {
+                interpret(env, node)?;
+            }
+            interpret(env, last_node)
+        }
         AstNode::Assign { ident, body } => {
             let expr = interpret(env, *body)?;
             env.variables.insert(ident, expr);

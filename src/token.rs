@@ -37,6 +37,8 @@ pub enum Token {
     #[token("end")]
     End,
 
+    #[token(",")]
+    Comma,
     #[token("(")]
     LRoundParen,
     #[token(")")]
