@@ -96,22 +96,48 @@ fn call(lexer: &mut Lexer) -> ParseResult {
 }
 
 fn binary(lexer: &mut Lexer) -> ParseResult {
-    use Token::*;
-    let l = primary(lexer)?;
-    let op = peek_token(lexer)?;
-    match op {
-        // TODO: precedence
-        Plus | Minus | Star | Slash | And | Or | EqualEqual | BangEqual => {
-            consume_token(lexer, &[])?;
-            let r = primary(lexer)?;
-            Ok(AstNode::Binary {
-                left: Box::new(l),
-                op,
-                right: Box::new(r),
-            })
+    binary_pratt(lexer, 0)
+}
+
+fn binary_pratt(lexer: &mut Lexer, min_bp: u8) -> ParseResult {
+    let mut l = primary(lexer)?;
+    loop {
+        let op = peek_token(lexer)?;
+        // TODO: if op is Eof|NewLine return
+        let (l_bp, r_bp) = match infix_binding_power(&op) {
+            Ok(v) => v,
+            Err(e) => {
+                dbg!(e);
+                break;
+            }
+        };
+        // old left > new left
+        if min_bp > l_bp {
+            break;
         }
-        _ => Ok(l),
+        consume_token(lexer, &[])?; // consume op
+        let r = binary_pratt(lexer, r_bp)?;
+        l = AstNode::Binary {
+            left: Box::new(l),
+            op,
+            right: Box::new(r),
+        }
     }
+
+    Ok(l)
+}
+
+fn infix_binding_power(op: &Token) -> Result<(u8, u8), String> {
+    use Token::*;
+    let bps = match op {
+        Plus | Minus => (1, 2),
+        Star | Slash => (3, 4),
+        And | Or => (5, 6),
+        // GTE, LTE, GT, LT
+        EqualEqual | BangEqual => (9, 10),
+        _ => return Err(format!("invalid operator for infix binding power {:?}", op)),
+    };
+    Ok(bps)
 }
 
 fn primary(lexer: &mut Lexer) -> ParseResult {
