@@ -57,6 +57,14 @@ pub enum Token {
     EqualEqual,
     #[token("!=")]
     BangEqual,
+    #[token("<")]
+    Less,
+    #[token(">")]
+    Greater,
+    #[token("<=")]
+    LessEqual,
+    #[token(">=")]
+    GreaterEqual,
 
     #[token("\n", priority = 3)]
     NewLine,

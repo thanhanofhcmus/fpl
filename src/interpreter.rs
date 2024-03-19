@@ -94,18 +94,22 @@ fn binary(env: &mut Environment, l: AstNode, op: Token, r: AstNode) -> Result<Va
             }
             Ok(Value::Bool((op == BangEqual) ^ is_equal))
         }
-        Plus | Minus | Star | Slash => {
+        Plus | Minus | Star | Slash | Less | LessEqual | Greater | GreaterEqual => {
             let (Value::Number(a), Value::Number(b)) = (&le, &re) else {
                 return Err(format!("expect two number, have {:?}, {:?}", le, re));
             };
             let v = match op {
-                Plus => a + b,
-                Minus => a - b,
-                Star => a * b,
-                Slash => a / b,
+                Plus => Value::Number(a + b),
+                Minus => Value::Number(a - b),
+                Star => Value::Number(a * b),
+                Slash => Value::Number(a / b),
+                Less => Value::Bool(a < b),
+                LessEqual => Value::Bool(a <= b),
+                Greater => Value::Bool(a > b),
+                GreaterEqual => Value::Bool(a >= b),
                 _ => panic!(),
             };
-            Ok(Value::Number(v))
+            Ok(v)
         }
         And | Or => {
             let (Value::Bool(a), Value::Bool(b)) = (&le, &re) else {

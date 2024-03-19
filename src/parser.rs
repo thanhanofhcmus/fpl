@@ -133,7 +133,7 @@ fn infix_binding_power(op: &Token) -> Result<(u8, u8), String> {
         Plus | Minus => (1, 2),
         Star | Slash => (3, 4),
         And | Or => (5, 6),
-        // GTE, LTE, GT, LT
+        Less | LessEqual | Greater | GreaterEqual => (7, 8),
         EqualEqual | BangEqual => (9, 10),
         _ => return Err(format!("invalid operator for infix binding power {:?}", op)),
     };
