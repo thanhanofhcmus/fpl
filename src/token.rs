@@ -34,11 +34,15 @@ pub enum Token {
     Then,
     #[token("else")]
     Else,
+    #[token("when")]
+    When,
     #[token("do")]
     Do,
     #[token("end")]
     End,
 
+    #[token("->")]
+    RThinArr,
     #[token(",")]
     Comma,
     #[token("(")]

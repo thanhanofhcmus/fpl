@@ -44,6 +44,18 @@ pub fn interpret(env: &mut Environment, ast: AstNode) -> Result<Value, String> {
             let v = interpret(env, if c { *true_ } else { *false_ })?;
             Ok(v)
         }
+        AstNode::When(cases) => {
+            for (cond_node, body) in cases {
+                let cond = interpret(env, cond_node)?;
+                let Value::Bool(c) = &cond else {
+                    return Err(format!("invalid if condition {:?}", cond));
+                };
+                if *c {
+                    return interpret(env, body);
+                }
+            }
+            Ok(Value::Nil)
+        }
         AstNode::Primary(v) => Ok(v),
         AstNode::Variable(ident) => Ok(env.get_with_parent(&ident).unwrap_or(Value::Nil)),
         AstNode::Multi(mut nodes) => {

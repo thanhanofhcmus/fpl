@@ -3,31 +3,72 @@ use crate::lexer::Lexer;
 use crate::token::Token;
 
 /*
-parse = multi
-mutli = aoc ("," aoc)+
+parse = expr
+expr = single | multi
+mutli = "do" (aoc ",")* "end"
+single = aoc
 aoc = assign | clause
 assign = IDENTIFIER "=" clause
-clause = if |  binary
-if = "if" clause "do" multi "else" multi "end"
+clause = binary
 binary = primary (BIN_OP primary)+
+binary_lower = if | when | primary
+if = "if" clause "then" expr "else" expr
+when = "when" (clause "then" expr)*
 primary = NIL | BOOL | NUMBER | STRING | IDENTIFIER, fn_decl | call
 call = IDENTIFIER "(" ARGS ")"
-fn_decl = IDENTIFIER ARGS "do" multi "end"
+fn_decl = "fn" PARAMS -> expr
+
+when true then 1 <MARKER> false then <MARKER> end
+
+f = fn n -> n + 1
+f = fn n -> do a = n + 1, a * 2 end
+if true then 1 else 2
+if a == 1 then do a + 1 end else do a - 2 end
+when
+    c1 -> a1,
+    c2 -> do
+        t1, t2
+    end,
+    c3 -> a3,
+    c4 -> do
+        t5
+    end
+
+when c1 -> a1, c2 -> do t1, t2 end, c3 -> a3, c4 -> do t5 end
+when c1 then a1, c2 then do t1, t2 end, c3 then a3, c4 then do t5 end
+when c1 then a1 c2 then a2 c3 then a3
+
+1 + if true then 2 else 3 * 3
+
+when
+    a then 2,
+    b then 1,
+end
 */
 
 pub type ParseResult = Result<AstNode, String>;
 
 pub fn parse(lexer: &mut Lexer) -> ParseResult {
-    multi(lexer)
+    expr(lexer)
+}
+
+fn expr(lexer: &mut Lexer) -> ParseResult {
+    if let Some(Ok(Token::Do)) = lexer.peek_token() {
+        multi(lexer)
+    } else {
+        single(lexer)
+    }
 }
 
 fn multi(lexer: &mut Lexer) -> ParseResult {
-    let mut nodes = comma_list(lexer, aoc)?;
-    if nodes.len() == 1 {
-        Ok(nodes.pop().unwrap())
-    } else {
-        Ok(AstNode::Multi(nodes))
-    }
+    consume_token(lexer, &[Token::Do])?;
+    let nodes = comma_list(lexer, aoc, Token::End)?;
+    consume_token(lexer, &[Token::End])?;
+    Ok(AstNode::Multi(nodes))
+}
+
+fn single(lexer: &mut Lexer) -> ParseResult {
+    aoc(lexer)
 }
 
 fn aoc(lexer: &mut Lexer) -> ParseResult {
@@ -52,10 +93,7 @@ fn assign(lexer: &mut Lexer) -> ParseResult {
 }
 
 fn clause(lexer: &mut Lexer) -> ParseResult {
-    match lexer.peek_token() {
-        Some(Ok(Token::If)) => if_(lexer),
-        _ => binary(lexer),
-    }
+    binary(lexer)
 }
 
 fn if_(lexer: &mut Lexer) -> ParseResult {
@@ -65,12 +103,26 @@ fn if_(lexer: &mut Lexer) -> ParseResult {
     let true_ = multi(lexer)?;
     consume_token(lexer, &[Token::Else])?;
     let false_ = multi(lexer)?;
-    consume_token(lexer, &[Token::End])?;
     Ok(AstNode::If {
         cond: Box::new(cond),
         true_: Box::new(true_),
         false_: Box::new(false_),
     })
+}
+
+fn when(lexer: &mut Lexer) -> ParseResult {
+    consume_token(lexer, &[Token::When])?;
+    let cases = comma_list(lexer, when_lower, Token::End)?;
+    // TODO: conider remove end at the end of a when clause
+    consume_token(lexer, &[Token::End])?;
+    Ok(AstNode::When(cases))
+}
+
+fn when_lower(lexer: &mut Lexer) -> Result<(AstNode, AstNode), String> {
+    let cond = clause(lexer)?;
+    consume_token(lexer, &[Token::RThinArr])?;
+    let body = multi(lexer)?;
+    Ok((cond, body))
 }
 
 fn call(lexer: &mut Lexer) -> ParseResult {
@@ -79,7 +131,7 @@ fn call(lexer: &mut Lexer) -> ParseResult {
         return Err(format!("need ident token, got {:?}", ident_token));
     };
     consume_token(lexer, &[Token::LRoundParen])?;
-    let args = comma_list(lexer, clause)?;
+    let args = comma_list(lexer, clause, Token::RRountParen)?;
     consume_token(lexer, &[Token::RRountParen])?;
     Ok(AstNode::Call { ident, args })
 }
@@ -90,7 +142,7 @@ fn binary(lexer: &mut Lexer) -> ParseResult {
 
 fn binary_pratt(lexer: &mut Lexer, min_bp: u8) -> ParseResult {
     // TODO: unary not, -
-    let mut l = primary(lexer)?;
+    let mut l = binary_lower(lexer)?;
     loop {
         let op = match lexer.peek_token() {
             Some(Ok(t)) => t,
@@ -131,6 +183,14 @@ fn infix_binding_power(op: &Token) -> Option<(u8, u8)> {
     Some(bps)
 }
 
+fn binary_lower(lexer: &mut Lexer) -> ParseResult {
+    match lexer.peek_token() {
+        Some(Ok(Token::If)) => if_(lexer),
+        Some(Ok(Token::When)) => when(lexer),
+        _ => primary(lexer),
+    }
+}
+
 fn primary(lexer: &mut Lexer) -> ParseResult {
     match lexer.peek_token() {
         Some(Ok(Token::Fn)) => return fn_decl(lexer),
@@ -157,10 +217,9 @@ fn primary(lexer: &mut Lexer) -> ParseResult {
 
 fn fn_decl(lexer: &mut Lexer) -> ParseResult {
     consume_token(lexer, &[Token::Fn])?;
-    let params = comma_list(lexer, extract_ident)?;
-    consume_token(lexer, &[Token::Do])?;
-    let body = multi(lexer)?;
-    consume_token(lexer, &[Token::End])?;
+    let params = comma_list(lexer, extract_ident, Token::RThinArr)?;
+    consume_token(lexer, &[Token::RThinArr])?;
+    let body = expr(lexer)?;
     Ok(AstNode::Primary(Value::Fn {
         params,
         body: Box::new(body),
@@ -170,7 +229,11 @@ fn fn_decl(lexer: &mut Lexer) -> ParseResult {
 fn comma_list<T>(
     lexer: &mut Lexer,
     lower_fn: fn(&mut Lexer) -> Result<T, String>,
+    end_token: Token,
 ) -> Result<Vec<T>, String> {
+    if lexer.peek_token() == Some(Ok(end_token)) {
+        return Ok(vec![]);
+    }
     let prim = lower_fn(lexer)?;
     let mut nodes = vec![prim];
     loop {
@@ -180,8 +243,10 @@ fn comma_list<T>(
                 let node = lower_fn(lexer)?;
                 nodes.push(node);
             }
+            // Some(Ok(t)) if t == end_token
             Some(Ok(_)) | None => break,
             Some(Err(err)) => return Err(err),
+            // TODO trailing comma
         }
     }
     Ok(nodes)

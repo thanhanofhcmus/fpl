@@ -27,6 +27,7 @@ pub enum AstNode {
         true_: Box<AstNode>,
         false_: Box<AstNode>,
     },
+    When(Vec<(AstNode, AstNode)>),
     Assign {
         ident: String,
         body: Box<AstNode>,
