@@ -100,9 +100,9 @@ fn if_(lexer: &mut Lexer) -> ParseResult {
     consume_token(lexer, &[Token::If])?;
     let cond = clause(lexer)?;
     consume_token(lexer, &[Token::Then])?;
-    let true_ = multi(lexer)?;
+    let true_ = expr(lexer)?;
     consume_token(lexer, &[Token::Else])?;
-    let false_ = multi(lexer)?;
+    let false_ = expr(lexer)?;
     Ok(AstNode::If {
         cond: Box::new(cond),
         true_: Box::new(true_),
@@ -121,7 +121,7 @@ fn when(lexer: &mut Lexer) -> ParseResult {
 fn when_lower(lexer: &mut Lexer) -> Result<(AstNode, AstNode), String> {
     let cond = clause(lexer)?;
     consume_token(lexer, &[Token::RThinArr])?;
-    let body = multi(lexer)?;
+    let body = expr(lexer)?;
     Ok((cond, body))
 }
 
