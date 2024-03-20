@@ -9,6 +9,8 @@ pub enum Token {
     And,
     #[token("or")]
     Or,
+    #[token("not")]
+    Not,
 
     #[token("nil")]
     Nil,

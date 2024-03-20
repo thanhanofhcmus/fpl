@@ -57,6 +57,17 @@ pub fn interpret(env: &mut Environment, ast: AstNode) -> Result<Value, String> {
             Ok(Value::Nil)
         }
         AstNode::Primary(v) => Ok(v),
+        AstNode::Unary { op, expr } => {
+            let re = interpret(env, *expr)?;
+            match re {
+                Value::Bool(b) if op == Token::Not => Ok(Value::Bool(!b)),
+                Value::Number(n) if op == Token::Minus => Ok(Value::Number(-n)),
+                _ => Err(format!(
+                    "invalid binary operator {:?} on value {:?}",
+                    op, re
+                )),
+            }
+        }
         AstNode::Variable(ident) => Ok(env.get_with_parent(&ident).unwrap_or(Value::Nil)),
         AstNode::Multi(mut nodes) => {
             // nodes is sure to have aleast one value in this state

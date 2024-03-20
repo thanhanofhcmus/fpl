@@ -10,10 +10,11 @@ single = aoc
 aoc = assign | clause
 assign = IDENTIFIER "=" clause
 clause = binary
-binary = primary (BIN_OP primary)+
-binary_lower = if | when | primary
+binary = binary_lower (BIN_OP binary_lower)+
+binary_lower = if | when | unary
 if = "if" clause "then" expr "else" expr
 when = "when" (clause "then" expr)*
+unary = ("not" | "-") unary
 primary = NIL | BOOL | NUMBER | STRING | IDENTIFIER, fn_decl | call
 call = IDENTIFIER "(" ARGS ")"
 fn_decl = "fn" PARAMS -> expr
@@ -187,6 +188,20 @@ fn binary_lower(lexer: &mut Lexer) -> ParseResult {
     match lexer.peek_token() {
         Some(Ok(Token::If)) => if_(lexer),
         Some(Ok(Token::When)) => when(lexer),
+        _ => unary(lexer),
+    }
+}
+
+fn unary(lexer: &mut Lexer) -> ParseResult {
+    match lexer.peek_token() {
+        Some(Ok(op)) if op == Token::Not || op == Token::Minus => {
+            consume_token(lexer, &[])?;
+            let expr = unary(lexer)?;
+            Ok(AstNode::Unary {
+                op,
+                expr: Box::new(expr),
+            })
+        }
         _ => primary(lexer),
     }
 }

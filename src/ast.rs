@@ -16,6 +16,10 @@ pub enum Value {
 pub enum AstNode {
     Primary(Value),
     Variable(String),
+    Unary {
+        op: Token,
+        expr: Box<AstNode>,
+    },
     Binary {
         left: Box<AstNode>,
         op: Token,
