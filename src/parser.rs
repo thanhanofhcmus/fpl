@@ -15,7 +15,8 @@ binary_lower = if | when | unary
 if = "if" clause "then" expr "else" expr
 when = "when" (clause "then" expr)*
 unary = ("not" | "-") unary
-primary = NIL | BOOL | NUMBER | STRING | IDENTIFIER, fn_decl | call
+primary = NIL | BOOL | NUMBER | STRING | IDENTIFIER, fn_decl | call | group
+group = "(" expr ")"
 call = IDENTIFIER "(" ARGS ")"
 fn_decl = "fn" PARAMS -> expr
 
@@ -54,7 +55,7 @@ pub fn parse(lexer: &mut Lexer) -> ParseResult {
 }
 
 fn expr(lexer: &mut Lexer) -> ParseResult {
-    if let Some(Ok(Token::Do)) = lexer.peek_token() {
+    if let Some(Token::Do) = lexer.peek_token_flatten() {
         multi(lexer)
     } else {
         single(lexer)
@@ -73,7 +74,7 @@ fn single(lexer: &mut Lexer) -> ParseResult {
 }
 
 fn aoc(lexer: &mut Lexer) -> ParseResult {
-    if let Some(Ok(Token::Equal)) = lexer.peek_two_token() {
+    if let Some(Token::Equal) = lexer.peek_two_token_flatten() {
         assign(lexer)
     } else {
         clause(lexer)
@@ -142,7 +143,6 @@ fn binary(lexer: &mut Lexer) -> ParseResult {
 }
 
 fn binary_pratt(lexer: &mut Lexer, min_bp: u8) -> ParseResult {
-    // TODO: unary not, -
     let mut l = binary_lower(lexer)?;
     loop {
         let op = match lexer.peek_token() {
@@ -185,16 +185,16 @@ fn infix_binding_power(op: &Token) -> Option<(u8, u8)> {
 }
 
 fn binary_lower(lexer: &mut Lexer) -> ParseResult {
-    match lexer.peek_token() {
-        Some(Ok(Token::If)) => if_(lexer),
-        Some(Ok(Token::When)) => when(lexer),
+    match lexer.peek_token_flatten() {
+        Some(Token::If) => if_(lexer),
+        Some(Token::When) => when(lexer),
         _ => unary(lexer),
     }
 }
 
 fn unary(lexer: &mut Lexer) -> ParseResult {
-    match lexer.peek_token() {
-        Some(Ok(op)) if op == Token::Not || op == Token::Minus => {
+    match lexer.peek_token_flatten() {
+        Some(op) if op == Token::Not || op == Token::Minus => {
             consume_token(lexer, &[])?;
             let expr = unary(lexer)?;
             Ok(AstNode::Unary {
@@ -207,10 +207,10 @@ fn unary(lexer: &mut Lexer) -> ParseResult {
 }
 
 fn primary(lexer: &mut Lexer) -> ParseResult {
-    match lexer.peek_token() {
-        Some(Ok(Token::Fn)) => return fn_decl(lexer),
-        Some(Ok(Token::Identifier(ident))) => {
-            if let Some(Ok(Token::LRoundParen)) = lexer.peek_two_token() {
+    match lexer.peek_token_flatten() {
+        Some(Token::Fn) => return fn_decl(lexer),
+        Some(Token::Identifier(ident)) => {
+            if let Some(Token::LRoundParen) = lexer.peek_two_token_flatten() {
                 return call(lexer);
             } else {
                 extract_token(lexer)?; //consume ident token
@@ -246,7 +246,7 @@ fn comma_list<T>(
     lower_fn: fn(&mut Lexer) -> Result<T, String>,
     end_token: Token,
 ) -> Result<Vec<T>, String> {
-    if lexer.peek_token() == Some(Ok(end_token)) {
+    if lexer.peek_token_flatten() == Some(end_token.clone()) {
         return Ok(vec![]);
     }
     let prim = lower_fn(lexer)?;
@@ -258,6 +258,7 @@ fn comma_list<T>(
                 let node = lower_fn(lexer)?;
                 nodes.push(node);
             }
+            Some(Ok(t)) if t == end_token => break,
             // Some(Ok(t)) if t == end_token
             Some(Ok(_)) | None => break,
             Some(Err(err)) => return Err(err),

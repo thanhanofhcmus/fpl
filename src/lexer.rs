@@ -16,6 +16,20 @@ impl<'source> Lexer<'source> {
         }
     }
 
+    pub fn peek_token_flatten(&mut self) -> Option<Token> {
+        match self.peek_token() {
+            Some(Ok(t)) => Some(t),
+            _ => None,
+        }
+    }
+
+    pub fn peek_two_token_flatten(&mut self) -> Option<Token> {
+        match self.peek_two_token() {
+            Some(Ok(t)) => Some(t),
+            _ => None,
+        }
+    }
+
     pub fn peek_token(&mut self) -> Option<TokenResult> {
         if self.peek_1.is_none() {
             self.peek_1 = Some(self.lexer.next());
